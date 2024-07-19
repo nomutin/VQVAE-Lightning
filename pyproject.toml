@@ -1,0 +1,65 @@
+[project]
+name = "vqvae-lightning"
+version = "0.1.0"
+description = "VQ-VAE implementation with PyTorch Lightning"
+authors = [
+    { name = "nomutin", email = "nomura0508@icloud.com" }
+]
+dependencies = [
+    "lightning>=2.3.3",
+    "vector-quantize-pytorch>=1.15.3",
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "ruff>=0.5.1",
+    "mypy>=1.10.1",
+    "torchvision>=0.18.1",
+    "gdown>=5.2.0",
+    "jsonargparse[signatures]>=4.31.0",
+    "wandb>=0.17.4",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vqvae_lightning"]
+
+[tool.pytest.ini_options]
+
+[tool.rye.scripts]
+cov = "pytest -ra --cov=src --cov-report=term --cov-report=xml"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+ignore = ["CPY001", "PLR0913"]
+fixable = ["ALL"]
+unfixable = []
+exclude = [".git", ".ruff_cache", ".venv",]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+preview = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["vqvae_lightning"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

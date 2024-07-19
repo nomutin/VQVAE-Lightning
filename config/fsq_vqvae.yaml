@@ -1,0 +1,74 @@
+---
+seed_everything: 42
+
+model:
+  class_path: vqvae_lightning.module.FSQVQVAE
+  init_args:
+    levels: [7, 5, 5, 5, 5]
+    num_hiddens: 128
+    num_residual_layers: 2
+    num_residual_hiddens: 32
+    num_downsampling_layers: 3
+    num_upsampling_layers: 3
+    activation_name: ReLU
+
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001
+
+lr_scheduler:
+  class_path: lightning.pytorch.cli.ReduceLROnPlateau
+  init_args:
+    mode: min
+    factor: 0.5
+    patience: 10
+    monitor: val_loss
+
+trainer:
+  accelerator: gpu
+  max_epochs: -1
+  gradient_clip_val: 10
+  deterministic: true
+  precision: 16-mixed
+  log_every_n_steps: 1
+  logger:
+    class_path: WandbLogger
+    init_args:
+      log_model: true
+      project: vqvae_test
+      save_dir: .venv
+  callbacks:
+    -
+      class_path: EarlyStopping
+      init_args:
+        monitor: val_loss
+        patience: 50
+        mode: min
+        verbose: True
+    - 
+      class_path: ModelCheckpoint
+      init_args:
+        monitor: val_loss
+        mode: min
+        save_top_k: 1
+    -
+      class_path: vqvae_lightning.callbacks.LogReconsrtuctions
+      init_args:
+        every_n_epochs: 50
+        num_samples: 16
+
+data:
+  class_path: vqvae_lightning.dataset.EpisodeObservationDataModule
+  init_args:
+    batch_size: 512
+    num_workers: 4
+    data_name: two_buttons
+    preprocess:
+      class_path: torchvision.transforms.Compose
+      init_args:
+        transforms:
+          - class_path: torchvision.transforms.ToTensor
+          - class_path: torchvision.transforms.Resize
+            init_args:
+              size: [64, 64]
