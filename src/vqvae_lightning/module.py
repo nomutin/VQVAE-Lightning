@@ -1,7 +1,14 @@
 """VQ-VAE model implementation."""
 
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import torch
+import wandb
+from einops import pack, unpack
 from lightning import LightningModule
 from torch import Tensor
+from typing_extensions import Self
 from vector_quantize_pytorch import FSQ, VectorQuantize
 
 from vqvae_lightning.networks import Decoder, Encoder
@@ -35,6 +42,21 @@ class AEBase(LightningModule):
         self.log_dict(loss_dict, prog_bar=True, sync_dist=True)
         return loss_dict
 
+    @classmethod
+    def load_from_wandb(cls, reference: str) -> Self:
+        """Load the model from wandb checkpoint."""
+        run = wandb.Api().artifact(reference)  # type: ignore[no-untyped-call]
+        with TemporaryDirectory() as tmpdir:
+            ckpt = Path(run.download(root=tmpdir))
+            model = cls.load_from_checkpoint(
+                checkpoint_path=ckpt / "model.ckpt",
+                map_location=torch.device("cpu"),
+            )
+        if not isinstance(model, cls):
+            msg = f"Model is not an instance of {cls}"
+            raise TypeError(msg)
+        return model
+
 
 class VQVAE(AEBase):
     """Vector Quantized Variational Autoencoder(VQ-VAE) model."""
@@ -53,7 +75,6 @@ class VQVAE(AEBase):
         activation_name: str,
     ) -> None:
         super().__init__()
-        self.save_hyperparameters()
         self.codebook_size = codebook_size
         self.alpha = alpha
         self.encoder = Encoder(
@@ -77,15 +98,31 @@ class VQVAE(AEBase):
             accept_image_fmap=True,
             codebook_size=codebook_size,
         )
+        config = {
+            "codebook_size": codebook_size,
+            "alpha": alpha,
+            "embedding_dim": embedding_dim,
+            "num_hiddens": num_hiddens,
+            "num_residual_layers": num_residual_layers,
+            "num_residual_hiddens": num_residual_hiddens,
+            "num_downsampling_layers": num_downsampling_layers,
+            "num_upsampling_layers": num_upsampling_layers,
+            "activation_name": activation_name,
+        }
+        self.save_hyperparameters(config)
 
     def encode(self, x: Tensor) -> Tensor:
         """Encode image tensor into latent space."""
+        x, ps = pack([x], "* c h w")
         feature_map = self.encoder.forward(x)
-        return self.vq.forward(feature_map)[0]
+        quantized, _, _ = self.vq.forward(feature_map)
+        return unpack(quantized, ps, "* c h w")[0]
 
     def decode(self, x: Tensor) -> Tensor:
         """Reconstruct image tensor from latent space."""
-        return self.decoder.forward(x)
+        x, ps = pack([x], "* c h w")
+        reconstruction = self.decoder.forward(x)
+        return unpack(reconstruction, ps, "* c h w")[0]
 
     def shared_step(self, batch: tuple[Tensor, ...]) -> dict[str, Tensor]:
         """Shared training/validation step."""
@@ -102,7 +139,7 @@ class VQVAE(AEBase):
         }
 
 
-class FSQVQVAE(AEBase):
+class FSQVAE(AEBase):
     """Vector Quantized Variational Autoencoder(VQ-VAE) with FSQ."""
 
     def __init__(
@@ -117,7 +154,6 @@ class FSQVQVAE(AEBase):
         activation_name: str,
     ) -> None:
         super().__init__()
-        self.save_hyperparameters()
         self.encoder = Encoder(
             embedding_dim=len(levels),
             num_hiddens=num_hiddens,
@@ -135,15 +171,29 @@ class FSQVQVAE(AEBase):
             activation_name=activation_name,
         )
         self.vq = FSQ(levels=list(levels))
+        config = {
+            "levels": levels,
+            "num_hiddens": num_hiddens,
+            "num_residual_layers": num_residual_layers,
+            "num_residual_hiddens": num_residual_hiddens,
+            "num_downsampling_layers": num_downsampling_layers,
+            "num_upsampling_layers": num_upsampling_layers,
+            "activation_name": activation_name,
+        }
+        self.save_hyperparameters(config)
 
     def encode(self, x: Tensor) -> Tensor:
         """Encode image tensor into latent space."""
+        x, ps = pack([x], "* c h w")
         feature_map = self.encoder.forward(x)
-        return self.vq.forward(feature_map)[0]
+        quantized, _ = self.vq.forward(feature_map)
+        return unpack(quantized, ps, "* c h w")[0]
 
     def decode(self, x: Tensor) -> Tensor:
         """Reconstruct image tensor from latent space."""
-        return self.decoder.forward(x)
+        x, ps = pack([x], "* c h w")
+        reconstruction = self.decoder.forward(x)
+        return unpack(reconstruction, ps, "* c h w")[0]
 
     def shared_step(self, batch: tuple[Tensor, ...]) -> dict[str, Tensor]:
         """Shared training/validation step."""

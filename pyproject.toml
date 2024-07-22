@@ -8,6 +8,8 @@ authors = [
 dependencies = [
     "lightning>=2.3.3",
     "vector-quantize-pytorch>=1.15.3",
+    "einops>=0.8.0",
+    "wandb>=0.17.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.10"
@@ -24,7 +26,6 @@ dev-dependencies = [
     "torchvision>=0.18.1",
     "gdown>=5.2.0",
     "jsonargparse[signatures]>=4.31.0",
-    "wandb>=0.17.4",
 ]
 
 [tool.hatch.metadata]

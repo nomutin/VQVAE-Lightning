@@ -12,7 +12,7 @@ model:
     num_residual_hiddens: 32
     num_downsampling_layers: 3
     num_upsampling_layers: 3
-    activation_name: ReLU
+    activation_name: Mish
 
 optimizer:
   class_path: torch.optim.AdamW
@@ -24,7 +24,7 @@ lr_scheduler:
   init_args:
     mode: min
     factor: 0.5
-    patience: 10
+    patience: 25
     monitor: val_loss
 
 trainer:
@@ -45,7 +45,7 @@ trainer:
       class_path: EarlyStopping
       init_args:
         monitor: val_loss
-        patience: 20
+        patience: 50
         mode: min
         verbose: True
     - 

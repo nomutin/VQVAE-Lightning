@@ -2,15 +2,15 @@
 seed_everything: 42
 
 model:
-  class_path: vqvae_lightning.module.FSQVQVAE
+  class_path: vqvae_lightning.module.FSQVAE
   init_args:
-    levels: [7, 5, 5, 5, 5]
+    levels: [7, 5, 5, 5]
     num_hiddens: 128
-    num_residual_layers: 2
+    num_residual_layers: 4
     num_residual_hiddens: 32
     num_downsampling_layers: 3
     num_upsampling_layers: 3
-    activation_name: ReLU
+    activation_name: Mish
 
 optimizer:
   class_path: torch.optim.AdamW
@@ -22,7 +22,7 @@ lr_scheduler:
   init_args:
     mode: min
     factor: 0.5
-    patience: 10
+    patience: 25
     monitor: val_loss
 
 trainer:
@@ -64,6 +64,7 @@ data:
     batch_size: 512
     num_workers: 4
     data_name: two_buttons
+    gdrive_url: https://drive.google.com/file/d/1tgDsrif9c43ZZ25798r3jFp_6XOJCKvW/view?usp=drive_link
     preprocess:
       class_path: torchvision.transforms.Compose
       init_args:

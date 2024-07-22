@@ -33,6 +33,7 @@ docstring-parser==0.16
     # via jsonargparse
 einops==0.8.0
     # via vector-quantize-pytorch
+    # via vqvae-lightning
 einx==0.3.0
     # via vector-quantize-pytorch
 filelock==3.15.4
@@ -187,6 +188,7 @@ urllib3==2.2.2
     # via sentry-sdk
 vector-quantize-pytorch==1.15.3
     # via vqvae-lightning
-wandb==0.17.4
+wandb==0.17.5
+    # via vqvae-lightning
 yarl==1.9.4
     # via aiohttp
